@@ -1,9 +1,0 @@
-spring:
-  application:
-    name: 03.spring-ai-app-stateful
-  ai:
-    openai:
-      api-key: ${OPENAI_API_KEY}
-      chat:
-        model: gpt-4o
-        max-tokens: 100

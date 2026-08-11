@@ -1,9 +1,0 @@
-spring:
-  application:
-    name: 04.spring-ai-app-prompt
-  ai:
-    openai:
-      api-key: ${OPENAI_API_KEY}
-      chat:
-        model: gpt-4o
-        max-tokens: 100
