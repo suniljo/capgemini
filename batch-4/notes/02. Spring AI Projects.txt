@@ -86,12 +86,12 @@ Step-1 : OpenAI Account setup
 
 Step-2 : Generate API key to access OpenAI LLMs	
 Create an API Key > 
-Name: My Test Key
+Name: spring-ai key
 Project : Default project
 Permissions : All
 > Create secret key
 
-Key : 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
+Key : 
 
 
 
