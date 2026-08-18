@@ -1,0 +1,574 @@
+==========
+Spring AI
+==========
+
+Pre-Requisites : Spring Boot + REST APIs
+
+Course Content : 
+
+1) What is Data Science
+
+2) What is AI & ML & DL & NLP & GEN AI & Agentic AI
+
+3) What is LLM? 
+
+4) What is OPEN AI ?
+
+5) Spring Boot integration with Open AI LLMs using Spring AI
+
+6) What is OLLAMA and Why?
+
+7) Spring AI with Local LLM Integration
+
+8) Image Generation using Open AI Models
+
+9) What is Prompt Engineering
+
+10) RAG Systems Development with Vector DB/Pinecone DB 
+
+
+Earlier, one of the most difficult roles in IT was the **development role**, because developers had to write most of the code manually.
+
+Today, the software industry is changing because of AI tools.
+
+Earlier:
+
+**Manual Coding Process** : 
+
+Developers had to write almost everything on their own.
+
+Today:
+
+**AI-Assisted Development / Vibe Coding** :
+
+Developers explain the requirement clearly to AI tools, and AI helps in generating code, improving productivity, debugging, testing, and documentation.
+
+This means development is becoming easier for people who understand:
+
+* Requirements
+* Logic
+* AI tools
+* Prompting
+* Application architecture
+* Testing
+* Deployment
+
+That is why learning **Gen AI + Agentic AI** is a powerful career opportunity.
+
+
+=======================
+What is Data Science ?
+=======================
+=> Data is the starting point of Data Science.
+=> Using data, we can create intelligence. 
+=> Using intelligence, we can build systems that can:
+    * Learn from data
+    * Understand human language
+    * Generate content
+    * Make predictions
+    * Take actions
+
+** Definition : Data Science is the process of collecting, cleaning, analyzing and understanding data patterns to make smart decisions in the business. **
+
+In simple words: **Data Science means extracting useful information from data.**
+
+==========================
+Data Science Life Cycle
+==========================
+
+The Data Science life cycle contains the following steps:
+
+1. **Collect Data**
+   Gather data from different sources such as files, databases, websites, sensors, applications, and APIs.
+
+2. **Clean Data**
+   Remove duplicate data, missing values, incorrect values, and unwanted information.
+
+3. **Analyze Data**
+   Study the data to understand patterns, trends, and relationships.
+
+4. **Visualize Data**
+   Represent data using charts, graphs, dashboards, and reports.
+
+5. **Build Model** LLM
+   Create a machine learning model based on the problem requirement.
+
+6. **Train Model**
+   Train the model using historical data so that it can learn patterns.
+
+7. **Test Model**
+   Check whether the model is giving correct predictions or not.
+
+8. **Deploy Model**
+   Make the model available for real-time usage in applications.
+
+9. **Monitor Model/ Results**
+   Continuously observe the model performance and improve it when required.
+
+
+=======================================
+What is AI ? (Artificial Intelligence)
+=======================================
+
+=> AI is the branch of data science / computer science.
+
+=> It aims to create the machine that can think and act like humans.
+
+=> It is used to create intelligent machines/system.
+
+ ~~~~~~~~ AI = Making computers to do tasks that normally require human intelligence ~~~~~~
+
+
+In normal programming, we tell the computer exactly what to do.
+
+but in Artificial Intelligence
+
+1) The machine observes data
+
+2) The machine learns from data patterns
+
+3) The machine improves over time
+
+4) The machine takes decision on its own
+
+Example: 
+
+=> If you tell a traditional program: "If temperature > 40, turn on AC in classroom, it follows only that rule.
+
+```
+if(temp > 40){	
+	turnOnAc( );
+}
+
+```
+
+But an AI system can learn:
+
+1) What temperature students prefer in classroom
+
+2) What time the room usually becomes hot and cool
+
+3) How to adjust automatically
+
+So AI is adaptive and smart.
+
+~~~~~~~~~~~~~~~~~~~~~ AI Real-life Examples ~~~~~~~~~~~~~~~~~~~~	
+
+1) Self Driving Cars
+
+2) Fraud Detection System in Banks
+
+3) Spam Detection in Email
+
+4) ChatGpt answering questions
+
+5) Git Hub Copilot generating code
+6) Voice assistants like Siri, Alexa, and Google Assistant
+7) Product recommendations in Amazon and Flipkart
+8) Movie recommendations in Netflix and YouTube
+etc
+
+===========================
+Why AI is Important Today?
+===========================
+Artificial Intelligence is very important today because it helps us to:
+
+1) Automate repetitive tasks
+
+2) Reduce human errors
+
+3) Saves time and cost
+
+4) Improve business decision-making
+
+5) Build smart applications for different industries - helps in medicine, farming, finance, education, e-commerce
+
+6) Work faster and more accurately
+7) Makes technology more personalized
+
+8) Helps companies make better decisions
+
+9) AI is shaping the future in every industry!
+
+
+**** AI is no longer only a research topic. It is used in real business applications today. ****
+
+AI is used in almost every industry, such as:
+
+* Medicine
+* Farming
+* Finance
+* Education
+* E-commerce
+* Banking
+* Software development
+* Transportation
+
+
+===================================
+What is ML? (Machine Learning)
+===================================
+
+=> Machine Learning is a subset/module of AI.
+
+=> ML allows computers to learn patterns from data instead of writing programs explicitly.
+Machine Learning allows computers to learn patterns from data without writing programs explicitly for every condition.
+
+**Machine Learning is a technique where the computer learns from data and makes predictions or decisions.**
+
+=> Machine Learning is a technique where
+
+	1) we give lot of data to computer
+
+	2) The computer finds patterns in that data
+
+	3) Then it uses those patterns to make predictions or decisions
+
+
+Note: Machine learning doesn't follow fixed rules like normal programming. Instead, it learns from examples/data.
+
+## Ex-1 : Cat and Dog Image Classification
+
+Suppose we show a machine 1000 pictures of cats and dogs.
+
+The Machine Learning model learns the patterns of cats and dogs.
+
+After training, if we give a new image, the model can identify whether it is a cat or a dog.
+
+
+## Ex-2 : Email Spam Filter
+
+In an email spam filter:
+
+1. The Machine Learning model learns from thousands of emails
+2. It observes which emails are marked as spam and which emails are safe
+3. Later, it automatically identifies spam emails in your inbox
+
+
+
+## Daily Life Examples of Machine Learning...		
+
+1) Netflix / Youtube Recommendations : Learns your watching patterns and suggests similar videos.
+
+2) Google Photos : Recognizes your face, pets, objects, etc.		
+
+3) Online Shopping (Flipkart/Amazon) : Shows products based on your past purchases / search history.
+
+4) Credit Card Fraud Detection : Detects unusual transactions and alerts the bank or customer.
+
+5) Google Maps : Predicts traffic and suggests the fastest route.
+
+# How Machine Learning Works in Projects
+
+Machine Learning projects generally follow these steps:
+
+## Step 1: Collect Data - Collect data from different sources such as images, text, numbers, articles, websites, databases, and APIs.
+
+## Step 2: Train the Model - Train the model using data. During training, the model learns patterns from the data.
+
+## Step 3: Test the Model - Test the model to check whether it is giving correct predictions or not.
+
+## Step 4: Use the Model - Use the trained model to make predictions on new unseen data.
+
+~~~~~~~ Machine Learning = Learn from data -> Improve over a time -> Make Predictions ~~~~~~~
+
+
+===========================
+What is Deep Learning? (DL)
+===========================
+
+=> Deep Learning is a subset of ML that uses artificial neural networks
+
+=> DL Algorithms inspired by the human brain to learn from large amounts of data.
+
+=> Deep Learning is part of Machine Learning, but it is much more powerful than Machine Learning.
+
+
+# Machine Learning vs Deep Learning
+===================================
+
+## Machine Learning
+
+* Machine Learning is a subset of AI
+* ML models learn from data using algorithms
+* Works well with small to medium data
+* Mostly works with structured data
+* Training time is usually faster
+* Easier to understand and explain
+* ML Algorithms : Linear Regression, Logistic Regression, Decision Tree, Random Forest
+
+## Deep Learning
+
+* Deep Learning is a subset of Machine Learning
+* DL uses neural networks with many layers
+* Needs a huge amount of data
+* Works well with unstructured data such as images, audio, video, and text
+* Training time is usually slower
+* Gives better accuracy for complex problems
+* DL Algorithms : Transformers, RAG
+
+
+
+=> ML is subset of AI where models learn from data using algorithms.
+=> DL is subset of ML that uses neural networks with many layers
+
+=> ML works well with small to medium data
+=> DL needs huge amount data
+
+=> ML works with structured data
+=> DL works with unstructured data (ex: images, audios, videos, files etc..)
+
+=> ML Algorithms : Linear Regression, Logistic Regression, Decision Tree, Random Forest
+=> DL Algorithms : Transformers, RAG
+
+=> ML Model Training Time : Faster
+=> DL model training time : Slower
+
+
+## Where is Deep Learning Used ? 
+
+Deep Learning is used in many advanced applications, such as:
+
+1. **Face Recognition** - Detects and recognizes faces using deep neural networks.
+
+2. **Speech to Text** - Converts spoken words into text.
+
+3. **Text to Speech** - Converts written text into voice.
+
+4. **Self-Driving Cars** - Detects traffic signals, road signs, pedestrians, and vehicles.
+
+5. **Medical Diagnosis** - Detects diseases from X-rays, MRI scans, and medical images.
+
+6. **Chatbots and AI Assistants** - Understand user questions and generate human-like responses.
+
+7. **ChatGPT (Large Language Models) : Uses huge deep learning models (Transformers).
+
+8. **Google Photos automatically grouping faces : Identifies objects: cats, dogs, people, cars.
+
+
+
+=====================
+Q) When to use ML ?
+=====================
+Machine Learning is suitable when:
+
+1. Data is limited
+2. Problem is simple
+3. Model should be easy to explain
+4. High accuracy is not extremely critical
+5. Data is mostly structured
+
+Examples:
+
+* Loan approval prediction
+* Customer churn prediction
+* Sales forecasting
+* Email spam detection
+
+
+=====================
+Q) When to use DL ?
+=====================
+Deep Learning is suitable when:
+
+1. Large amount of data is available
+2. Data is in the form of images, audio, video, or text
+3. Problem is complex
+4. High accuracy is very important
+5. Powerful hardware like GPU is available
+
+Examples:
+
+* Face recognition
+* Voice assistants
+* Image classification
+* Self-driving cars
+* Generative AI applications
+
+
+
+==========================================
+What is NLP? (Natural Language Processing)
+==========================================
+		
+=> NLP stands for Natural Language Processing.
+
+=> Natural Language Processing (NLP) is a branch of AI that helps computers understand, interpret, and generate human language.
+
+~~~ NLP = Teaching computers to understand English, Telugu, Hindi, or any human language. ~~~
+
+Humans communicate using language sentences, emotions, tone, grammar.
+
+But computers communicate using numbers those are 0s and 1s
+
+NLP is the technology that acts as a bridge between humans and computers.
+
+=> Using NLP, computers can perform below activities
+
+		- Read text
+		- Listen to speech
+		- Understand meaning
+		- Analyze human emotions
+		- Generate Answers
+		- Translate languages
+
+
+# What Can NLP Do?
+
+Using NLP, computers can perform the following activities:
+
+1. Read text
+2. Listen to speech
+3. Understand meaning
+4. Analyze human emotions
+5. Generate answers
+6. Translate languages
+7. Summarize large documents
+8. Extract important information from text
+
+---
+
+# NLP Real-Life Examples
+
+## ChatGPT and Gemini 
+ChatGPT and Gemini understand user questions and generate human-like answers.
+
+## Google Translate
+Google Translate converts one language into another language, such as Telugu to English or Hindi to Tamil.
+
+## Siri and Alexa
+Siri and Alexa understand spoken commands and respond to users.
+
+## Email Spam Detection
+NLP helps identify whether an email is spam or not.
+
+## Sentiment Analysis
+Companies use NLP to understand whether customer feedback is positive, negative, or neutral.
+
+
+
+# Final Summary
+
+Data Science, AI, ML, DL, and NLP are connected to each other.
+
+* **Data Science** extracts useful information from data.
+* **Artificial Intelligence** makes machines intelligent.
+* **Machine Learning** allows machines to learn from data.
+* **Deep Learning** uses neural networks to solve complex problems.
+* **NLP** helps computers understand and generate human language.
+
+In simple words:
+
+**Data -> Data Science -> AI -> ML -> DL -> NLP / Gen AI Applications**
+
+These technologies are the foundation for modern intelligent applications like ChatGPT, Gemini, self-driving cars, recommendation systems, fraud detection systems, and AI-powered software tools.
+
+	
+
+
+===================================
+What is Generative AI? (GenAI)
+==================================
+
+=> Generative AI is a type of AI that can create new content like text, images, videos, audios, code, report, email template -based on the data it has learned.
+
+=> GEN AI models don't just analyze the data, they generate something new...
+
+### Traditional AI focuses on:
+
+	- Classification (spam or not spam)
+
+	- Predication (price, weather)
+
+	- Detection (objects, fraud)
+
+### But Generative AI goes beyond that.
+
+=> It learns patterns from huge amounts of data and then uses those patterns to generate original content that looks like it was created by human.
+
+## GEN AI Examples
+
+	- Chat GPT : Creates text
+
+	- MidJourney/DALL-E : Creates images
+
+	- Suno : Creates music
+
+	- RunWayML : Creates videos
+
+	- GitHub Copilot : Writes code	
+
+        - Gamma  - https://gamma.app  -- To create power-point presentation
+
+=> If you train GEN AI model with 1000 songs, then it can create new song which is not a copy of any single song.
+
+
+========================
+6) What is Agentic AI? 
+========================	
+
+=> Agentic AI is a type of Artificial Intelligence that can think, decide, and take actions on its own to achieve a goal
+
+=> Agentic AI is used to develop intelligent AI assistant or AI agents
+
+
+=> Traditional AI can answer only our questions where as Agentic AI can "plan + Act + Complete Task independently".
+
+~~ Gen AI : Only generates content + Needs user prompt + Static response
+
+~~ Agentic AI : Takes actions to achieve goals + Can work autonomously + Interactive, decision-making
+
+
+Note: Agentic AI behaves like a digital worker.	
+
+~~~~~~~~~ Agentic AI Scenario : Organize a school event ~~~~~~~~~~~~
+
+			- Make a plan
+			- Book the hall
+			- Send message to students
+			- Create Posters
+			- Prepare Guest list
+			- Send Invitations
+			- Manage event schedule
+
+
+Prompt : Create JAVA Material
+
+GEN AI : Creates material for java topics and will give us as a file
+
+AGENTIC AI :  Creates material for java topics + send that material to our email
+
+
+# Agentic AI Examples
+
+	- An AI that books your flight tickets after comparing prices
+
+	- AI that reads your emails and drafts replies
+
+	- AI DevOps agents that deploy apps automatically
+
+	- AI customer support agents that solve issues end-to-end
+
+	- AI personal assistant that schedules meetings
+
+
+===========
+Summary
+===========
+
+** Data Science --> Find useful insights from data to make smart business decisions
+
+** AI =>> Big Umbrella, it is used to make systems more intelligent.
+
+** ML =>> System learns from existing data and make decisions/predictions on new data
+
+** DL => ML that uses neural networks to find patterns on complex data
+
+** NLP => AI that understands human language
+
+** GEN AI => AI that creates new content
+
+** Agentic AI => AI that takes actions (AI Agent)
+
+
+
