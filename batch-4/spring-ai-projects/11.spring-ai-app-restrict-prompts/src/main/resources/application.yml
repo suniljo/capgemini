@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: 11.spring-ai-app-restrict-prompts
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        model: gpt-4o
+        max-tokens: 100

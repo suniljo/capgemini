@@ -1,0 +1,343 @@
+====================
+Configuring Advisors
+====================
+
+## What Are Advisors?
+
+==> In Spring AI, advisors are like interceptors or middleware for your prompt flow. (Similar to filters in web application)
+
+They allow you to:
+-> Pre-process or post-process prompt data
+-> Add custom logging or auditing
+-> Inject additional behavior without modifying core logic
+-> Chain multiple behaviors cleanly
+
+==> Where Advisors Fit
+   
+    User → ChatClient -> [Advisors] -> LLM -> Response -> [Advisors] -> User
+
+Best Practices
+
+-> Keep advisors stateless or request-scoped
+-> Chain multiple advisors if needed
+-> Avoid altering the meaning of prompts unless intentional
+-> Use advisors for cross-cutting concerns, not core logic
+
+
+=> Spring AI provides some built-in advisors, and you can create your own.
+
+=> Built-in Example: MessageChatMemoryAdvisor, SimpleLoggerAdvisor, SafeGuardAdvisor, PromptChatMemoryAdvisor etc.
+
+=> How can advisors configured ?
+ chatClientBuilder
+     .defaultAdvisors(new SimpleLoggerAdvisor())
+     .build();
+
+OR
+
+ chatClient
+  .prompt()
+  .advisors(new SimpleLoggerAdvisor())
+  .user(message)
+  .call().content();
+
+=> We can implement our own advisor by implementing the CallAdvisor, StreamAdvisor interfaces
+
+
+
+The SimpleLoggerAdvisor is a built-in component in Spring AI that acts as an interceptor to log chat requests sent to large language models and responses received back. It supports both blocking and streaming calls without modifying payloads
+
+How It Works?
+1. Intercepts ChatClientRequest before it goes to the model.
+2. Captures ChatResponse payload data after it returns.
+3. Works with standard chat calls and reactive streams.
+3. Prints payloads through standard logging frameworks at debug levels
+
+
+
+==> How to configure Advisors? <===
+
+@Configuration
+public class ChatClientConfig {
+
+    @Bean
+    public ChatClient chatClient(ChatClient.Builder chatClientBuilder) {
+        return chatClientBuilder
+                .defaultAdvisors(new SimpleLoggerAdvisor())
+                .defaultSystem("""
+                        You are an internal HR assistant. Your role is to help\s
+                        employees with questions related to HR policies, such as\s
+                        leave policies, working hours, benefits, and code of conduct.
+                        If a user asks for help with anything outside of these topics,\s
+                        kindly inform them that you can only assist with queries related to\s
+                        HR policies.
+                        """)
+                .defaultUser("How can you help me ?")
+                .build();
+    }
+}
+
+
+SimpleLoggerAdvisor --> a simple logger advisor that logs the request and response messages
+
+==> logging.level.org.springframework.ai.chat.client.advisor=DEBUG
+
+ 
+                .defaultAdvisors(List.of(new SimpleLoggerAdvisor(),
+                        new TokenUsageAuditAdvisor()))
+
+
+GET - http://localhost:8080/api/chat?question=How many leaves I can take
+
+
+
+==> Custom Advisors in Spring AI
+==> Understanding & Configuring Chat Options in Spring AI
+==> Structured Output in Spring AI
+
+
+=============================
+Open Source LLM Local Setup
+=============================
+
+=> A Local LLM means running a Large Language Model directly on our own laptop, desktop, or server instead of calling cloud APIs like OpenAI, Gemini, or Claude.
+
+
+=> For local LLM setup - the easiest option is "Ollama" or you can use "LM Studio" - Discover, download, and run local LLMs with LM Studio
+
+## Cloud AI
+
+    spring boot app ----> spring ai ----> openai api / gemini api ---> response
+
+
+## Local AI
+
+    spring boot app -----> spring ai ---> ollama running locally ---> local LLM model ---> response
+
+
+=> Ollama is one of the easiest tools for running open-source LLMs locally.
+
+Ex : 
+        1) llama3.2
+        2) mistral
+        3) gemma2
+        4) deepseek-r1
+        5) phi3
+
+=> It provides a command-line tool and a local REST API, usually available at http://localhost:11434
+
+=> Ollama also supports many open models and has an official Docker image.
+
+
+### Advantages
+
+        -- NO API Key Required
+        -- NO API Cost
+        -- Privacy
+        -- Offline Use
+        -- Good For learning
+
+### Limitations
+
+        -- Needs RAM
+
+        -- Slower than cloud
+
+        -- Model Quality varies
+
+
+## System Requirements To Run Local LLM
+
+        RAM : 8 GB (16 GB recommended)
+
+        CPU : Any modern (minimum i5 processor)
+
+        OS : Windows/ Linux / MacOs
+
+        GPU (NVIDIA) : 6 - 8 GB VRAM
+
+
+
+==========
+PRACTICALS
+==========
+
+# Step-1 : Download and install Ollama software        
+
+        URL : https://ollama.com
+
+	Ollamasetup.exe
+
+# Step-2 : After installation, open CMD and execute ollama commands
+
+# show ollama commands
+$ ollama help
+
+# display list of LLMS available in our machine
+$ ollama list
+
+# download LLM
+$ ollama pull gemma:2b
+
+# run the LLM
+$ ollama run gemma:2b        
+
+# see LLMs which are running
+$ ollama ps
+
+Note: Once model started, we can give prompt to model and it will provide response 
+
+# stop the model execution
+ctrl + d (or) /bye
+
+# Uninstall gemma:2b
+$ollama rm gemma:2b
+
+
+=====================================================================
+Connect Spring Boot application to Gemma:2b Model running in local  
+=====================================================================   
+
+
+## Step-1 : Run LLM as an API (to connect with Projects)
+
+        $ ollama serve
+
+
+## Step-2 : Add ollama starter in pom.xml file   
+
+                
+```
+<dependency>
+    <groupId>org.springframework.ai</groupId>
+    <artifactId>spring-ai-starter-model-ollama</artifactId>
+</dependency>
+```
+
+# Step-3 : configure ollama props in application.yml file like below
+
+```
+spring:
+  ai:
+    ollama:
+      chat:
+        options:
+          model: gemma:2b
+```   
+
+New Project: 04.spring-ai-app-local-llm
+Dependencies: Spring Web, Ollama, Thymeleaf, Lombok, DevTools
+
+$ ollama serve   --- http://localhost:11434/
+
+---- application.properties ----
+ spring.ai.ollama.chat.model=gemma:2b
+
+
+--- Service class ----
+@Service
+public class ChatServices {
+
+	private ChatClient chatClient;
+	
+	public ChatServices(ChatClient.Builder builder, ChatMemory chatMemory) {
+		this.chatClient = builder.defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+								 .build();
+	}
+	
+	public String askAnything(String question) {
+	     return	chatClient.prompt()
+	    		 	  .system("You are a helpful Java and Spring Boot assistant.")
+				  .user(question)
+				  .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, "user-101"))
+				  .call()
+				  .content();
+	}
+}
+
+
+
+--- Controller class ---
+@RestController
+@RequestMapping(path = "/api")
+public class ChatRestController {
+
+	public ChatServices services;
+
+	public ChatRestController(ChatServices services) {
+		super();
+		this.services = services;
+	}
+	
+
+	@GetMapping("/askAnything")
+	public String handleAskAnything(@RequestParam String question) {
+
+		String answer = services.askAnything(question);
+
+		return answer;
+	}	
+}
+
+
+===============================================
+Building Application with Spring AI and Docker 
+===============================================
+
+What is Docker Model Runner?
+
+** Docker Model Runner is a general term referring to the practice of running AI models inside Docker containers, often to provide a local, isolated, and portable environment for serving LLMs or other machine learning models.
+
+It's commonly used to:
+• Run open-source LLMs (e.g., LLaMA2, Mistral, Falcon)
+• Deploy tools like Ollama, LM Studio, LocalAI, Text Generation Web UI
+• Host custom or fine-tuned models in a containerized setup
+
+
+For more details, refer below links - https://docs.docker.com/ai/model-runner
+
+
+1. Install model in local using Docker - We need to run a model locally using the below docker command
+
+ $ docker model run ai/gemma3
+
+This will Loads the model and exposes a REST API which accepts prompt requests and returns completions
+
+
+2. Add Required Dependencies - Enables Spring Boot web and Docker integration
+<dependency>
+ <groupId>org.springframework.boot</groupId>
+ <artifactId>spring-boot-starter-webmvc</artifactId>
+</dependency>
+<dependency>
+ <groupId>org.springframework.ai</groupId>
+ <artifactId>spring-ai-starter-model-openai</artifactId>
+</dependency>
+
+3. configure properties in Spring AI app
+
+Configure below properties in application.properties or application.yml. You need to mention a dummy API key
+
+spring.ai.openai.api-key=test
+spring.ai.openai.base-url=http://localhost:12434/engines/v1
+spring.ai.openai.chat.model=ai/gemma3
+
+
+4. Create the Chat Controller
+
+@RestController
+@RequestMapping("/api")
+public class ChatController {
+  private final ChatClient chatClient;
+  public ChatController(ChatClient.Builder chatClientBuilder) {
+   this.chatClient = chatClientBuilder.build();
+}
+  @GetMapping("/chat")
+  String chat(@RequestParam("message") String message) {
+    return this.chatClient.prompt(message)
+        .call()
+        .content();
+ }
+}
+
+
