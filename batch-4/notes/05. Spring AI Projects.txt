@@ -1,0 +1,682 @@
+============================================
+Streaming AI Responses using stream() method
+============================================
+
+Note: 
+Streaming in Spring AI streams OpenAI/Ollama chat completions to the client **incrementally**, as tokens are generated, over Server-Sent Events (SSE) — instead of waiting for the full response and sending it back
+in one shot.
+
+Note:  In Spring AI, you can stream real-time responses token-by-token using the ChatClient.stream() method, which returns a reactive Flux<String> through Project Reactor. This dramatically improves user experience by lowering perceived latency, similar to ChatGPT
+
+Note: Server-sent events (SSE) is a web technology that lets a browser receive automatic updates from a server over a http connection. Key features include one-way data flow, automatic reconnection, and standard HTTP support
+
+$$$$ Application $$$$
+
+Dependency: Spring Reactive Web
+
+spring.ai.ollama.chat.model=gemma:2b
+
+
+
+@RestController
+@RequestMapping("/api")
+public class StreamAIRestController {
+    private final ChatClient chatClient;
+
+    public StreamAIRestController(ChatClient.Builder builder) {
+        this.chatClient = builder.build();
+    }
+
+    @GetMapping("/chat")
+    public String chat(@RequestParam("message") String message) {
+        return chatClient.prompt()                
+                	 .user(message)
+                	 .call()
+                	 .content();
+    }
+    
+    //reactive programming  
+    @GetMapping("/stream")
+    public Flux<String> askAnythingStream(@RequestParam("message") String message) {
+        return chatClient.prompt()
+        		 .user(message)
+        		 .stream()   // Switches from blocking .call() to reactive .stream()
+        		 .content(); // Extracts the textual token chunks from the response
+    }
+}
+
+
+
+/*
+WebFlux is used for the reactive/streaming endpoint (Flux<String> + SSE).
+spring-boot-starter-web to be included so you get an embedded servlet container + MVC for any non-streaming endpoints; WebFlux's SSE support works fine alongside it via WebFluxAutoConfiguration only where used.
+*/
+
+
+# Approach -2   :   14.spring-ai-streaming
+
+
+@Configuration
+public class ChatClientConfig {
+
+    @Bean
+    public ChatClient chatClient(ChatModel chatModel) {
+        return ChatClient.builder(chatModel)
+                .defaultSystem("You are a helpful assistant. Answer clearly and concisely.")
+                .build();
+    }
+}
+
+
+
+@Configuration
+public class WebConfig {
+
+    @Bean
+    public WebFluxConfigurer corsConfigurer() {
+        return new WebFluxConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/api/**")
+                        .allowedOriginPatterns("*")
+                        .allowedMethods("GET", "POST")
+                        .allowedHeaders("*");
+            }
+        };
+    }
+}
+
+
+-- dto --
+
+public record PromptRequest(
+        @NotBlank(message = "prompt is required")
+        String prompt) { }
+
+
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class StreamingChatService {
+
+    private final ChatClient chatClient;
+
+    public Flux<String> streamResponse(String prompt) {
+        return chatClient.prompt()
+                .user(prompt)
+                .stream()
+                .content()
+                .doOnSubscribe(sub -> log.info("Starting stream for prompt: {}", prompt))
+                .doOnNext(chunk -> {
+                	log.info("Chunk: {}", chunk);
+                	System.out.println("Next Chunk = " + chunk);
+                })
+                .doOnError(err -> log.error("Streaming error", err))
+                .doOnComplete(() -> {
+                	log.info("Stream complete");
+                	System.out.println("Stream complete");
+                });
+    }
+}
+
+
+
+@RestController
+@RequestMapping("/api/chat")
+@RequiredArgsConstructor
+public class StreamingChatController {
+
+    private final StreamingChatService streamingChatService;
+
+    @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<String>> streamGet(@RequestParam String prompt) {
+    	Flux<String> fluxResponse = streamingChatService.streamResponse(prompt);
+        return toSse(fluxResponse);
+    }
+
+
+    @PostMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<String>> streamPost(@RequestBody PromptRequest request) {
+    	String prompt = request.prompt();
+    	Flux<String> fluxResponse = streamingChatService.streamResponse(prompt);
+        return toSse(fluxResponse);
+    }
+
+    private Flux<ServerSentEvent<String>> toSse(Flux<String> chunks) {
+    	Flux<ServerSentEvent<String>> data = chunks.map(chunk -> ServerSentEvent.builder(chunk)
+                				   			.event("message")
+                        			   			.build());
+
+        // Emit a distinct terminal event so the client knows the stream is done
+        // (some proxies/clients don't reliably surface Flux completion otherwise).
+        Flux<ServerSentEvent<String>> completion = Flux.just(
+                ServerSentEvent.<String>builder("")
+                        	.event("complete")
+                        	.build());
+        
+        return data.concatWith(completion);
+    }
+}
+
+
+
+========================================
+Structured Output Converter in Spring AI
+========================================
+
+=> Why Do We Need Structured Output?
+
+LLMs typically return plain text responses. But in real-world apps, we often need structured data like,
+  -> JSON
+  -> XML
+  -> Java Classes (POJOs)
+
+Structured data is easier to parse, use, and integrate in applications.
+
+
+=> What is a Structured Output Converter?
+
+ A helper that does two key things:
+ 
+ => Before sending prompt to LLM:
+     -> Adds formatting instructions to guide the model.
+     -> Ensures it replies in a parseable format.
+
+ => After getting response from LLM:
+     -> Converts raw text into a Java object, like Map, List, or custom class.
+
+
+Example: Convert response to a Java object
+
+   CountryCities countryCities = chatClient.prompt()
+					   .user(question)
+					   .call()
+					   .entity(CountryCities.class);
+
+Example: Convert response to a list of Java objects
+
+  List<CountryCities> countryCitiesList = chatClient.prompt()
+						    .user(question)
+						    .call()
+						    .entity(new ParameterizedTypeReference<List<CountryCities>>() {})
+
+
+
+Example: Convert response to a Map
+
+  Map<String, List<String>> countryMapList = chatClient.prompt()
+						       .user(question)
+						       .call()
+						       .entity(new ParameterizedTypeReference<Map<String, 										List<String>>>() {});
+
+
+
+
+Spring AI's StructuredOutputConverter helps convert raw LLM text responses into structured Java data like objects, lists, or maps.
+
+We can use it's implementations as well like BeanOutputConverter, ListOutputConverter, and MapOutputConverter, add format instructions before the AI call and parse the response after, making it easier to work with typed
+data in your applications
+
+
+==> Demo on Structured Output using Google Gemini
+	-> https://aistudio.google.com/welcome
+	-> Get Started > Login
+	-> Prompt: "Provide me the list of cities in India"
+		-> response will be in plain English text/ String format
+	
+	-> Playground > Structured output - Enable -- Edit
+	     Response   Object
+	     	country    String
+             	cities     String Array
+
+
+Practicals
+
+--model - CountryCities.java --
+
+public record CountryCities(String country, List<String> cities) { }
+
+-- controller--
+
+package com.capgemini.ai.controllers;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
+import org.springframework.ai.converter.ListOutputConverter;
+import org.springframework.ai.converter.MapOutputConverter;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.capgemini.ai.model.CountryCities;
+
+@RestController
+@RequestMapping("/api")
+public class StructuredOutputController {
+
+    private final ChatClient chatClient;
+
+    public StructuredOutputController(ChatClient.Builder chatClientBuilder) {
+        this.chatClient = chatClientBuilder.defaultAdvisors(new SimpleLoggerAdvisor())
+                						   .build();
+    }
+
+    @GetMapping("/chat-bean")
+    public ResponseEntity<CountryCities> chatBean(@RequestParam("message") String message) {
+        CountryCities countryCities = chatClient
+                .prompt()
+                .user(message)
+                .call().entity(CountryCities.class);
+        return ResponseEntity.ok(countryCities);
+    }
+
+    @GetMapping("/chat-list")
+    public ResponseEntity<List<String>> chatList(@RequestParam("message") String message) {
+        List<String> countryCities = chatClient
+                .prompt()
+                .user(message)
+                .call().entity(new ListOutputConverter());
+        return ResponseEntity.ok(countryCities);
+    }
+
+    @GetMapping("/chat-map")
+    public ResponseEntity<Map<String,Object>> chatMap(@RequestParam("message") String message) {
+        Map<String, Object> countryCities = chatClient
+                .prompt()
+                .user(message)
+                .call().entity(new MapOutputConverter());
+        return ResponseEntity.ok(countryCities);
+    }
+
+    @GetMapping("/chat-bean-list")
+    public ResponseEntity<List<CountryCities>> chatBeanList(@RequestParam("message") String message) {
+        List<CountryCities> countryCities = chatClient
+                .prompt()
+                .user(message)
+                .call().entity(new ParameterizedTypeReference<List<CountryCities>>() {
+                });
+        return ResponseEntity.ok(countryCities);
+    }
+
+}
+
+
+==> logging.level.org.springframework.ai.chat.client.advisor=DEBUG
+
+GET - http://localhost:8080/api/chat-bean?message=provide me the cities in India
+
+
+
+
+=========================
+Tool Calling in Spring AI
+=========================
+
+What is Tool Calling?
+
+=> Imagine your AI model is a brilliant intern—knows a lot, but doesn't know everything especially real time data.
+Sometimes, it needs to "call a tool" (like calling a friend or API) to:
+  -> Look up something it doesn’t know (e.g., "What’s the weather in Hyderabad right now?")
+  -> Do something for you (e.g., "Book a ticket", "Send an email", or "Create a new Jira ticket"  -- an action
+
+
+### Two Superpowers of Tool Calling: ###
+
+      Super Power			What it does?				Real-world analogy
+      -----------			-------------				------------------
+  1) Information Retrieval   - Fetches real-time data from external systems -   Like googling the latest cricket score for you
+ 
+  2) Taking Action 	     - Performs an action in your app	- 	  Like asking Siri to "Set an alarm at 5 AM" 
+
+
+### How Tool Calling Different from RAG? ###
+
+     Tool Calling 						RAG
+     ------------						---
+1) Like calling a plumber to fix a leak 		1) Like reading a DIY manual to fix it yourself
+2) The model says: "I need help, here's what to do" 	2) The model says: "Let me read some documents and figure it
+								out"
+3) Takes live action or fetches live data 		3) Focuses on augmenting answers using retrieved content
+4) Requires client app to execute the tool		4) Just retrieves documents and continues generating response
+
+
+DIY -> Do It Yourself
+
+=> Tool calling in Spring AI allows language models to run local Java methods and interact with external APIs. 
+Key components include @Tool annotations, ToolCallback registrations, and ChatClient integrations
+
+=> Spring AI can expose Java methods as tools/functions that the LLM can invoke automatically based on the user's request.
+
+Example #1:
+ -> Understand user queries like "What's the time in New York?"
+ -> Call real Java methods (tools!) to get the live answer
+ -> Respond like a smart assistant 
+ => This is called Tool Calling — when the AI calls backend methods to do real work!
+
+dependencies: Spring Web, DevTools, OpenAI
+
+spring.ai.openai.api-key= ${OPENAI_API_KEY}
+spring.ai.openai.chat.model= gpt-4o
+spring.ai.openai.chat.max-tokens= 100
+
+
+@Configuration
+public class ChatClientConfiguration {
+	
+	@Bean
+	public ChatClient getnerateChatClient(ChatClient.Builder builder, ChatMemory chatMemory) {
+		return builder.defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+					  .build();
+	}
+}
+
+
+@RestController
+@RequestMapping("/api/tools")
+public class TimeController {
+   private final ChatClient chatClient;
+
+   public TimeController(ChatClient chatClient) {
+	        this.chatClient = chatClient;
+   }
+
+   @GetMapping("/local-time")
+   public ResponseEntity<String> localTime(@RequestHeader("username") String username,
+           @RequestParam("message") String message) {
+       String answer = chatClient.prompt()
+               .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, username))
+               .user(message)
+               .call()
+               .content();
+       
+       return ResponseEntity.ok(answer);
+   }   
+}
+
+GET - http://localhost:8080/api/tools/local-time?message=What is the current time in Hyderabad, India
+
+=> check the Response ******  -- here we are directly talking with the LLM core model
+
+=> check the same question in ChatGPT ***** - here we are using an application which is acting as an LLM wrapper and this wrapper application has got some capabilities of searching the web to understand the real time information
+
+
+### Tool Calling in Action ###
+
+=> Teaching LLMs to tell the time
+
+create a new Java class - TimeTools.java
+
+@Component
+public class TimeTools {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(TimeTools.class);
+
+    @Tool(name="getCurrentLocalTime", description = "Get the current time in the user's timezone")
+    String getCurrentLocalTime() {
+        LOGGER.info("Returning the current time in the user's timezone");
+        return LocalTime.now().toString();
+    }
+}
+
+@Tool -> this is a special annotation developed by Spring AI team to expose the logic of a java method as a tool
+
+-> this Tool should be configured in the ChatClient bean
+
+@Configuration
+public class ChatClientConfiguration {
+	
+	@Bean
+	public ChatClient getnerateChatClient(ChatClient.Builder builder, ChatMemory chatMemory, TimeTools timeTools) {
+		return builder.defaultTools(timeTools)
+			      .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+			      .build();
+	}
+}
+
+	OR it can be defined directly in the service method/ controller api
+
+	chatClient.prompt()	
+		  .tools(toolBean)
+
+
+GET - http://localhost:8080/api/tools/local-time?message=What is the current time in in my location
+
+Check the Logs
+
+-> create one more tool to get the time of any location
+
+    @Tool(name = "getCurrentTime",
+            description = "Get the current time in the specified time zone.")
+    public String getCurrentTime(@ToolParam(
+            description = "Value representing the time zone") String timeZone) {
+        LOGGER.info("Returning the current time in the timezone {}", timeZone);
+        return LocalTime.now(ZoneId.of(timeZone)).toString();
+    }
+
+
+GET - http://localhost:8080/api/tools/local-time?message=What is the current time in Hyderabad, India
+      http://localhost:8080/api/tools/local-time?message=What is the current time in London, UK
+      http://localhost:8080/api/tools/local-time?message=What is the current time in New York
+
+
+
+### How the Tools are getting called by LLM internally? ###
+
+It may seem like Spring AI exposes your tool as an endpoint for OpenAI to call, but that’s not what happens. Instead, a behind-the-scenes conversation occurs between your app and the model whenever a tool is involved.
+
+PPT - 14 & 15
+
+
+
+
+
+====Loan Application Status Tool ======
+
+@Configuration
+public class ChatClientConfig {
+    @Bean
+    public ChatClient chatClient(ChatClient.Builder builder) {
+
+        return builder
+                .defaultAdvisors(new SimpleLoggerAdvisor())
+                .defaultSystem("""
+                        You are a helpful loan assistant.
+
+                        Rules:
+                        1. If the user asks about loan status, use the available loan status tool.
+                        2. Do not guess loan status.
+                        3. If application id is missing, ask the user for the application id.
+                        4. Keep the final response simple and clear.
+                        """)
+                .build();
+    }
+}
+
+
+-- dtos --
+
+public record ChatRequest(String message) { }
+
+
+public record LoanStatusResponse(        
+	String applicationId,
+        String status,
+        String message) {}
+
+
+-- service class --
+
+@Service
+public class LoanService {
+
+    private final Map<String, LoanStatusResponse> loanDatabase = Map.of(
+            "APP123", new LoanStatusResponse(
+                    "APP123",
+                    "UNDER_REVIEW",
+                    "Your loan application is currently under review by the credit team."
+            ),
+            "APP456", new LoanStatusResponse(
+                    "APP456",
+                    "APPROVED",
+                    "Your loan application has been approved."
+            )
+    );
+
+    public LoanStatusResponse getLoanStatus(String applicationId) {
+
+        return loanDatabase.getOrDefault(
+                applicationId,
+                new LoanStatusResponse(
+                        applicationId,
+                        "NOT_FOUND",
+                        "No loan application was found for this application id."
+                )
+        );
+    }
+}
+
+
+
+@Component
+public class LoanTool {
+
+    private final LoanService loanService;
+    private static final Logger log =
+            LoggerFactory.getLogger(LoanTool.class);
+
+    public LoanTool(LoanService loanService) {
+        this.loanService = loanService;
+    }
+
+    @Tool(description = "Get current loan application status using loan application id")
+    public LoanStatusResponse getLoanStatus (
+            @ToolParam(description = "Loan application id") String applicationId) {
+
+        log.info("Tool selected by model");
+        log.info(" applicationId={}", applicationId);
+
+        return loanService.getLoanStatus(applicationId);
+
+    }
+}
+
+
+
+@RestController
+@RequestMapping("/api/loan-assistant")
+public class LoanAssistantController {
+
+    private static final Logger log = LoggerFactory.getLogger(LoanAssistantController.class);
+    private final ChatClient chatClient;
+    private final LoanTool loanTool;
+
+    public LoanAssistantController(ChatClient chatClient, LoanTool loanTool) {
+        this.chatClient = chatClient;
+        this.loanTool = loanTool;
+    }
+
+    @PostMapping("/chat")
+    public String chat(@RequestBody ChatRequest request) {
+    	 log.info("User asked: {}", request.message());
+         return  chatClient.prompt()
+                           .user(request.message())
+                           .tools(loanTool)
+                           .call()
+                           .content();
+
+    }
+}
+
+
+POST    http://localhost:8080/api/loan-assistant/chat
+
+{ 
+   "message": "what is the status of my loan APP123"
+}
+
+
+
+
+
+
+===========================================
+Web search tool integration with Spring AI
+===========================================
+
+1. User asks a question like "What is the status of my loan application?" to AI Model
+2. AI Model does not know the answer
+3. Model selects a tool ---> Tool Call getLoanApplicationStatus(applicationId) - applicationId=1234567
+4. Spring AI executes our backend method
+      --> execute a tool
+      --> call backend method by connecting to a DB
+      --> Fetch data
+5. Tool result is sent back to the method
+      {
+        "applicationId": 1234567,
+        "status": "APPROVED"
+      }
+
+6. Model generates the final response 
+     --> Your loan application with no: 1234567 is APPROVED, Congrats
+7. Response returned to the User
+
+
+
+Usecase - 2
+
+**web search tool**. When you ask something time-sensitive ("what's the latest version of X", "who is the current CEO of Y"), the model decides on its own to call the tool, gets back real search results, and folds them into its answer.
+
+## How the tool calling works
+
+1. 'WebSearchTool' is a @Component' with one method annotated '@Tool(description = ...)
+   plus @ToolParam on each argument. Spring AI turns that into a JSON schema
+   and sends it to OpenAI as an available function.
+
+2. ChatClientConfig builds the 'ChatClient' bean with
+   .defaultTools(webSearchTool), so every request through it offers the tool
+   to the model automatically.
+
+3. When the model's response includes a tool call, Spring AI invokes
+   'WebSearchTool.searchWeb(query, maxResults)' for you, feeds the result back
+   to the model as a tool message, and the model produces its final answer —
+   all inside the single 'chatClient.prompt().user(...).call()' in
+   ChatRestController. No manual function-dispatch loop needed.
+
+4. WebSearchTool doesn't call a search API directly — it depends on the
+   'WebSearchProvider' interface, implemented here by 'TavilyWebSearchProvider'
+   (Tavily is built specifically for feeding LLM agents). Swap in Bing, Serper,
+   Google Programmable Search, etc. by writing another 'WebSearchProvider'
+   implementation; nothing else changes.
+
+
+
+Watch the app logs — you'll see 'Tool call: searchWeb(query=..., maxResults=...)'
+right before the model's final answer comes back, showing the round trip
+happened.
+
+Try a non-time-sensitive question too ("explain recursion") to see the model
+skip the tool entirely when it doesn't need current information.
+
+## Extending
+
+- Add more tools (e.g. a calculator, a stock price lookup) the same way:
+  another '@Component' with '@Tool' methods, added to '.defaultTools(...)'.
+- To see the tool call/result pairs in the response (not just the final
+  answer), inspect 'ChatResponse' (Spring AI's, not this app's DTO) from
+  '.call().chatResponse()' instead of '.content()'.
+- Add per-request tool selection by calling '.tools(...)' on a specific
+  'chatClient.prompt()' call instead of registering tools as defaults.
+
+
+Tavily API KEY = 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
+
+
+
+
